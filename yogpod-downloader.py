@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2016 Gonçalo Baltazar <me@goncalomb.com>
+# YoGPoD-Downloader is released under the terms of the MIT License.
+# See LICENSE.txt for details.
 
 from __future__ import division, absolute_import, print_function, unicode_literals
 try: range = xrange
