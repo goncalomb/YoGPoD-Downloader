@@ -11,7 +11,7 @@ except NameError: pass
 try: input = raw_input
 except NameError: pass
 
-import os, sys, time, re, signal
+import os, sys, io, time, re, signal
 import xml.etree.ElementTree as ET
 
 def signal_handler(sig):
@@ -116,6 +116,7 @@ ensure_path(data_dir)
 episodes = []
 for type_name, type_data in episode_types.items():
 	type_data["dir"] = data_dir + "/" + type_name
+	type_data["episodes"] = []
 	type_data["count"] = 0
 	type_data["count_have"] = 0
 	type_data["size"] = 0
@@ -166,6 +167,7 @@ for item in reversed(list(channel.iter("item"))):
 		episode_types[episode["type"]]["count_have"] += 1
 		episode_types[episode["type"]]["size_have"] += episode["size"]
 
+	episode_types[episode["type"]]["episodes"].append(episode)
 	episodes.append(episode)
 
 if found_unknown:
@@ -209,6 +211,17 @@ for episode in episodes:
 		ensure_path(episode_types[episode["type"]]["dir"])
 		download_file(episode["url"], episode["local_file"], True);
 		episode["have"] = True
+
+# create playlists
+
+print("Creating playlists...")
+for type_name, type_data in episode_types.items():
+	with io.open(data_dir + "/" + type_name + ".m3u8", "w", encoding="utf-8") as fp:
+		fp.write("#EXTM3U\r\n")
+		for episode in type_data["episodes"]:
+			fp.write("#EXTINF:0," + episode["title"] + "\r\n")
+			fp.write(episode["local_file"][len(data_dir) + 1:] + "\r\n")
+		fp.close()
 
 # the end
 
