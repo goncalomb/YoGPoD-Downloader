@@ -171,6 +171,8 @@ for item in reversed(list(channel.iter("item"))):
 	episodes.append(episode)
 
 if found_unknown:
+	print("Cannot download unknown episodes. Look for an update on GitHub:")
+	print("https://github.com/goncalomb/YoGPoD-Downloader")
 	print()
 
 # show information
@@ -201,6 +203,9 @@ if total_count_have != total_count:
 		for type_name, type_data in episode_types.items():
 			if type_data["count_have"] != type_data["count"]:
 				type_data["download"] = confirm("Download " + type_name + " (" + format_size(type_data["size"] - type_data["size_have"]) + ")")
+	print()
+else:
+	print("Nothing to download!")
 	print()
 
 # download files
