@@ -217,16 +217,21 @@ for episode in episodes:
 		ensure_path(episode_types[episode["type"]]["dir"])
 		download_file(episode["url"], episode["local_file"], True);
 		episode["have"] = True
+		episode_types[episode["type"]]["count_have"] += 1
+		episode_types[episode["type"]]["size_have"] += episode["size"]
 
 # create playlists
 
 print("Creating playlists...")
 for type_name, type_data in episode_types.items():
+	if type_data["count_have"] == 0:
+		continue
 	with io.open(data_dir + "/" + type_name + ".m3u8", "w", encoding="utf-8") as fp:
 		fp.write("#EXTM3U\r\n")
 		for episode in type_data["episodes"]:
-			fp.write("#EXTINF:0," + episode["title"] + "\r\n")
-			fp.write(episode["local_file"][len(data_dir) + 1:] + "\r\n")
+			if episode["have"]:
+				fp.write("#EXTINF:0," + episode["title"] + "\r\n")
+				fp.write(episode["local_file"][len(data_dir) + 1:] + "\r\n")
 		fp.close()
 
 # the end
