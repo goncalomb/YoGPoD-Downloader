@@ -11,6 +11,12 @@ except NameError: pass
 try: input = raw_input
 except NameError: pass
 
+try:
+	from urlparse import urlparse
+except ImportError:
+	from urllib.parse import urlparse
+
+
 import os, sys, io, time, re, signal
 import xml.etree.ElementTree as ET
 
@@ -160,7 +166,7 @@ for item in reversed(list(channel.iter("item"))):
 		found_unknown = True
 		continue
 
-	episode["local_file"] = data_dir + "/" + episode["type"] + "/" + os.path.basename(episode["url"])
+	episode["local_file"] = data_dir + "/" + episode["type"] + "/" + os.path.basename(urlparse(episode["url"]).path)
 
 	episode["have"] = False
 	if os.path.isfile(episode["local_file"]) and os.path.getsize(episode["local_file"]) == episode["size"]:
