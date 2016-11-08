@@ -16,9 +16,9 @@ try:
 except ImportError:
 	from urllib.parse import urlparse
 
-
-import os, sys, io, time, re, signal
+import os, sys, io, time, re, signal, argparse
 import xml.etree.ElementTree as ET
+from email.utils import parsedate as parsedate
 
 def signal_handler(sig):
 	print("\r\033[K\r" + sig)
@@ -130,6 +130,12 @@ for type_name, type_data in episode_types.items():
 	type_data["size_have"] = 0
 	type_data["download"] = True
 
+# parse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--no-mtime", action="store_true", help="don't set file dates")
+args = parser.parse_args()
+
 # download and parse feed
 
 print("Fetching RSS feed (yogpod.libsyn.com/rss)...")
@@ -148,6 +154,7 @@ for item in reversed(list(channel.iter("item"))):
 
 	episode = {
 		"title": item.find("title").text,
+		"date": item.find("pubDate").text,
 		"url": item.find("enclosure").get("url"),
 		"size": int(item.find("enclosure").get("length"))
 	}
@@ -225,6 +232,16 @@ for episode in episodes:
 		episode["have"] = True
 		episode_types[episode["type"]]["count_have"] += 1
 		episode_types[episode["type"]]["size_have"] += episode["size"]
+
+# touch files
+
+if not args.no_mtime:
+	print("Setting file dates...")
+	for episode in episodes:
+		if episode["have"]:
+			atime = os.stat(episode["local_file"]).st_mtime
+			mtime = int(time.mktime(parsedate(episode["date"])))
+			os.utime(episode["local_file"], (0, mtime))
 
 # create playlists
 
