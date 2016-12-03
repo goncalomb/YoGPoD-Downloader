@@ -35,7 +35,7 @@ episode_types = {
 	"Interviews": { "regex": "^Interview|^Nordrassil" },
 	"YoGPoD-Animations": { "regex": "^(.+): YoGPoD Fan Animation (\d+|Bonus!)$" },
 	"SimpleSimon": { "regex": "^Simple Simon " },
-	"Triforce": { "regex": "^Triforce! #(\d+?): (.+)$" },
+	"Triforce": { "regex": "^Triforce! #(\d+?)(?:: | - )(.+)$" },
 	"PyrionLovesAnime": { "regex": "^Pyrion Loves Anime #(\d+?) - (.+)$" }
 }
 
