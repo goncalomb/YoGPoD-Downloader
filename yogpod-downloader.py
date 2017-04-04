@@ -246,16 +246,21 @@ if not args.no_mtime:
 
 # create playlists
 
+# remove old m3u8 playlists
+for type_name in episode_types.keys():
+	try: os.remove(data_dir + "/" + type_name + ".m3u8")
+	except OSError: pass
+
 if args.no_playlists:
 	for type_name in episode_types.keys():
-		try: os.remove(data_dir + "/" + type_name + ".m3u8")
+		try: os.remove(data_dir + "/" + type_name + ".m3u")
 		except OSError: pass
 else:
 	print("Creating playlists...")
 	for type_name, type_data in episode_types.items():
 		if type_data["count_have"] == 0:
 			continue
-		with io.open(data_dir + "/" + type_name + ".m3u8", "w", encoding="utf-8") as fp:
+		with io.open(data_dir + "/" + type_name + ".m3u", "w", encoding="utf-8") as fp:
 			fp.write("#EXTM3U\r\n")
 			for episode in type_data["episodes"]:
 				if episode["have"]:
