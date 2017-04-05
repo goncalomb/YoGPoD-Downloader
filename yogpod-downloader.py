@@ -133,6 +133,8 @@ for type_name, type_data in episode_types.items():
 # parse
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--reverse", action="store_true", help="reverse the download order (newer first)")
+parser.add_argument("--top-up", action="store_true", help="download missing episodes (don't download new series)")
 parser.add_argument("--no-mtime", action="store_true", help="don't set file dates")
 parser.add_argument("--no-playlists", action="store_true", help="don't create playlists")
 args = parser.parse_args()
@@ -190,6 +192,9 @@ if found_unknown:
 	print("https://github.com/goncalomb/YoGPoD-Downloader")
 	print()
 
+if args.reverse:
+	episodes.reverse()
+
 # show information
 
 total_count = 0
@@ -214,11 +219,20 @@ print()
 # ask what to download
 
 if total_count_have != total_count:
-	if not confirm("Download everything (" + format_size(total_size - total_size_have) + ")"):
+	if args.top_up:
+		dlany = False
+		for type_name, type_data in episode_types.items():
+			type_data["download"] = type_data["count_have"] > 0 and type_data["count_have"] != type_data["count"]
+			if type_data["download"]:
+				dlany = True
+		if not dlany:
+			print("Nothing to download (but other series are available, remove --top-up)!")
+			print()
+	elif not confirm("Download everything (" + format_size(total_size - total_size_have) + ")"):
 		for type_name, type_data in episode_types.items():
 			if type_data["count_have"] != type_data["count"]:
 				type_data["download"] = confirm("Download " + type_name + " (" + format_size(type_data["size"] - type_data["size_have"]) + ")")
-	print()
+		print()
 else:
 	print("Nothing to download!")
 	print()
