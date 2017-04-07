@@ -132,9 +132,19 @@ for type_name, type_data in episode_types.items():
 
 # parse
 
+def parse_positive_integer(s):
+	try:
+		i = int(s)
+		if (i >= 0):
+			return i
+	except ValueError: pass
+	raise argparse.ArgumentTypeError("invalid int value: '{0}'".format(s))
+
 parser = argparse.ArgumentParser()
-parser.add_argument("--reverse", action="store_true", help="reverse the download order (newer first)")
-parser.add_argument("--top-up", action="store_true", help="download missing episodes (don't download new series)")
+parser.add_argument("-r", "--reverse", action="store_true", help="reverse the download order (newer first)")
+parser.add_argument("-t", "--top-up", action="store_true", help="download missing episodes (don't download new series)")
+parser.add_argument("-l", "--limit", metavar="N", type=parse_positive_integer, default=0, help="download only up the N'th episode per series")
+parser.add_argument("--no-downloads", action="store_true", help="don't download anything")
 parser.add_argument("--no-mtime", action="store_true", help="don't set file dates")
 parser.add_argument("--no-playlists", action="store_true", help="don't create playlists")
 args = parser.parse_args()
@@ -192,9 +202,6 @@ if found_unknown:
 	print("https://github.com/goncalomb/YoGPoD-Downloader")
 	print()
 
-if args.reverse:
-	episodes.reverse()
-
 # show information
 
 total_count = 0
@@ -218,7 +225,7 @@ print()
 
 # ask what to download
 
-if total_count_have != total_count:
+if total_count_have != total_count and not args.no_downloads:
 	if args.top_up:
 		dlany = False
 		for type_name, type_data in episode_types.items():
@@ -233,20 +240,27 @@ if total_count_have != total_count:
 			if type_data["count_have"] != type_data["count"]:
 				type_data["download"] = confirm("Download " + type_name + " (" + format_size(type_data["size"] - type_data["size_have"]) + ")")
 		print()
-else:
+elif not args.no_downloads:
 	print("Nothing to download!")
 	print()
 
 # download files
 
-for episode in episodes:
-	if episode_types[episode["type"]]["download"] and not episode["have"]:
-		print("Downloading " + episode["title"] + "...")
-		ensure_path(episode_types[episode["type"]]["dir"])
-		download_file(episode["url"], episode["local_file"], True);
-		episode["have"] = True
-		episode_types[episode["type"]]["count_have"] += 1
-		episode_types[episode["type"]]["size_have"] += episode["size"]
+if not args.no_downloads:
+	for type_name, type_data in episode_types.items():
+		i = 0
+		for episode in (reversed(type_data["episodes"]) if args.reverse else type_data["episodes"]):
+			i += 1
+			if type_data["download"] and not episode["have"]:
+				if args.limit > 0 and args.limit < i:
+					print("Will not continue downloading '{0}' (limit: {1}).".format(type_name, args.limit))
+					break
+				print("Downloading " + episode["title"] + "...")
+				ensure_path(episode_types[episode["type"]]["dir"])
+				download_file(episode["url"], episode["local_file"], True);
+				episode["have"] = True
+				episode_types[episode["type"]]["count_have"] += 1
+				episode_types[episode["type"]]["size_have"] += episode["size"]
 
 # touch files
 
