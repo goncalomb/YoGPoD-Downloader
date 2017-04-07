@@ -20,8 +20,12 @@ import os, sys, io, time, re, signal, argparse
 import xml.etree.ElementTree as ET
 from email.utils import parsedate as parsedate
 
+current_downloading_file = None
 def signal_handler(sig):
-	print("\r\033[K\r" + sig)
+	if current_downloading_file:
+		try: os.remove(current_downloading_file)
+		except OSError: pass
+	print("\r\033[K\rAbort (" + sig + ").")
 	sys.exit(1)
 signal.signal(signal.SIGINT, lambda a, b: signal_handler("SIGINT"))
 signal.signal(signal.SIGTERM, lambda a, b: signal_handler("SIGTERM"))
@@ -84,6 +88,8 @@ def reporthook(count, block_size, total_size):
 try:
 	import requests
 	def download_file(url, filename, progress=False):
+		global current_downloading_file
+		current_downloading_file = filename
 		r = requests.get(url, stream=True, headers={"Accept-Encoding": ""})
 		length = int(r.headers['Content-Length'])
 		read = 0
@@ -96,6 +102,7 @@ try:
 					fp.write(chunk)
 					if progress:
 						reporthook(read, 1, length)
+		current_downloading_file = None
 		if progress:
 			sys.stdout.write("\r\033[K\r");
 			sys.stdout.flush()
@@ -120,7 +127,6 @@ print()
 
 ensure_path(data_dir)
 
-episodes = []
 for type_name, type_data in episode_types.items():
 	type_data["dir"] = data_dir + "/" + type_name
 	type_data["episodes"] = []
@@ -195,7 +201,6 @@ for item in reversed(list(channel.iter("item"))):
 		episode_types[episode["type"]]["size_have"] += episode["size"]
 
 	episode_types[episode["type"]]["episodes"].append(episode)
-	episodes.append(episode)
 
 if found_unknown:
 	print("Cannot download unknown episodes. Look for an update on GitHub:")
@@ -266,7 +271,7 @@ if not args.no_downloads:
 
 if not args.no_mtime:
 	print("Setting file dates...")
-	for episode in episodes:
+	for episode in [ep for type_data in episode_types.values() for ep in type_data["episodes"]]:
 		if episode["have"]:
 			atime = os.stat(episode["local_file"]).st_mtime
 			mtime = int(time.mktime(parsedate(episode["date"])))
@@ -274,10 +279,11 @@ if not args.no_mtime:
 
 # create playlists
 
-# remove old m3u8 playlists
+# remove old m3u8 playlists (TODO: remove this code some time in the future) ---
 for type_name in episode_types.keys():
 	try: os.remove(data_dir + "/" + type_name + ".m3u8")
 	except OSError: pass
+# ------------------------------------------------------------------------------
 
 if args.no_playlists:
 	for type_name in episode_types.keys():
@@ -287,6 +293,8 @@ else:
 	print("Creating playlists...")
 	for type_name, type_data in episode_types.items():
 		if type_data["count_have"] == 0:
+			try: os.remove(data_dir + "/" + type_name + ".m3u")
+			except OSError: pass
 			continue
 		with io.open(data_dir + "/" + type_name + ".m3u", "w", encoding="utf-8") as fp:
 			fp.write("#EXTM3U\r\n")
