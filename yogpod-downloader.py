@@ -78,6 +78,10 @@ def reporthook(count, block_size, total_size):
 	if count == 0:
 		reporthook_time = now
 	current = count*block_size
+	if total_size == 0:
+		sys.stdout.write("\r\033[K\r  ???%   {} / ???\r".format(format_size(current)))
+		sys.stdout.flush()
+		return
 	if current > total_size:
 		current = total_size
 	percent = current*100/total_size
@@ -91,7 +95,7 @@ try:
 		global current_downloading_file
 		current_downloading_file = filename
 		r = requests.get(url, stream=True, headers={"Accept-Encoding": ""})
-		length = int(r.headers['Content-Length'])
+		length = int(r.headers["Content-Length"]) if "Content-Length" in r.headers else 0
 		read = 0
 		with open(filename, "wb") as fp:
 			if progress:
