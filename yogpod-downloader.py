@@ -151,6 +151,7 @@ def parse_positive_integer(s):
 	raise argparse.ArgumentTypeError("invalid int value: '{0}'".format(s))
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--legacy-yogpod", action="store_true", help="download Legacy YoGPoDs by Demuzed")
 parser.add_argument("-r", "--reverse", action="store_true", help="reverse the download order (newer first)")
 parser.add_argument("-t", "--top-up", action="store_true", help="download missing episodes (don't download new series)")
 parser.add_argument("-l", "--limit", metavar="N", type=parse_positive_integer, default=0, help="download only up the N'th episode per series")
@@ -158,6 +159,49 @@ parser.add_argument("--no-downloads", action="store_true", help="don't download 
 parser.add_argument("--no-mtime", action="store_true", help="don't set file dates")
 parser.add_argument("--no-playlists", action="store_true", help="don't create playlists")
 args = parser.parse_args()
+
+# download legacy yogpods
+
+if args.legacy_yogpod:
+	try:
+		import youtube_dl
+	except ImportError:
+		print("ERROR: 'youtube-dl' is required to download legacy YoGPoD's. Install with 'pip install youtube-dl'?")
+		sys.exit(1)
+
+	print("The Legacy YoGPoD's by Demuzed are fan-made versions of The YoGPoD.")
+	print("Check them on YouTube:")
+	print("https://www.youtube.com/playlist?list=PLNEbhjI-nYGtSscF3FwyMQKU2M-F-0k7S")
+	print()
+
+	if not confirm("Start downloading from YouTube?"):
+		sys.exit()
+
+	dl_dir = data_dir + "/Legacy"
+	ensure_path(dl_dir)
+	os.chdir(dl_dir)
+
+	files = list()
+	def progress_hook(d):
+		if d["status"] == "finished":
+			files.append(d["filename"])
+
+	ydl_opts = {
+		"format": "bestaudio/best",
+		"progress_hooks": [progress_hook],
+	}
+	with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+		ydl.download(["https://www.youtube.com/playlist?list=PLNEbhjI-nYGtSscF3FwyMQKU2M-F-0k7S"])
+
+	os.chdir("..")
+	with io.open("Legacy.m3u", "w", encoding="utf-8") as fp:
+		fp.write("#EXTM3U\r\n")
+		for f in files:
+			fp.write("#EXTINF:0," + f + "\r\n")
+			fp.write("Legacy/" + f + "\r\n")
+		fp.close()
+
+	sys.exit(0)
 
 # download and parse feed
 
