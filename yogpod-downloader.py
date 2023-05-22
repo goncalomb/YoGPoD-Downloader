@@ -152,6 +152,7 @@ def parse_positive_integer(s):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--legacy-yogpod", action="store_true", help="download Legacy YoGPoDs by Demuzed")
+parser.add_argument("--legacy-yogpod-ogg", action="store_true", help="convert Legacy YoGPoDs extracted audio to ogg")
 parser.add_argument("-r", "--reverse", action="store_true", help="reverse the download order (newer first)")
 parser.add_argument("-t", "--top-up", action="store_true", help="download missing episodes (don't download new series)")
 parser.add_argument("-l", "--limit", metavar="N", type=parse_positive_integer, default=0, help="download only up the N'th episode per series")
@@ -164,9 +165,9 @@ args = parser.parse_args()
 
 if args.legacy_yogpod:
 	try:
-		import youtube_dl
+		import yt_dlp
 	except ImportError:
-		print("ERROR: 'youtube-dl' is required to download legacy YoGPoD's. Install with 'pip install youtube-dl'?")
+		print("ERROR: 'yt-dlp' is required to download legacy YoGPoD's. Install with 'pip3 install yt-dlp'?")
 		sys.exit(1)
 
 	print("The Legacy YoGPoD's by Demuzed are fan-made versions of The YoGPoD.")
@@ -182,15 +183,30 @@ if args.legacy_yogpod:
 	os.chdir(dl_dir)
 
 	files = list()
-	def progress_hook(d):
-		if d["status"] == "finished":
-			files.append(d["filename"])
+	def postprocessor_hooks(d):
+		if d['status'] == 'finished' and d['postprocessor'] == 'MoveFiles':
+			expected_ext = '.ogg' if args.legacy_yogpod_ogg else '.opus'
+			f_name, f_ext = os.path.splitext(d['info_dict']['filepath'])
+			# print(d['info_dict'])
+			if f_ext != expected_ext:
+				# because we are not overwriting the final files (nopostoverwrites)
+				# sometimes we can't determine the correct file name, fix the extension
+				files.append('%s%s' % (f_name, expected_ext))
+			else:
+				files.append(d['info_dict']['filepath'])
 
 	ydl_opts = {
 		"format": "bestaudio/best",
-		"progress_hooks": [progress_hook],
+		"keepvideo": True,
+		"postprocessor_hooks": [postprocessor_hooks],
+		"postprocessors": [{
+			'key': 'FFmpegExtractAudio',
+			'preferredcodec': 'vorbis' if args.legacy_yogpod_ogg else 'opus',
+			'preferredquality': 0,
+			'nopostoverwrites': True,
+		}],
 	}
-	with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+	with yt_dlp.YoutubeDL(ydl_opts) as ydl:
 		ydl.download(["https://www.youtube.com/playlist?list=PLNEbhjI-nYGtSscF3FwyMQKU2M-F-0k7S"])
 
 	os.chdir("..")
